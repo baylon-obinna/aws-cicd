@@ -25,5 +25,5 @@ phases:
       - echo "Build completed successfully!"
 artifacts:
     files:
-     - '*'
-    base-directory: ./aws-cicd
+     - '**/*'
+    base-directory: .
