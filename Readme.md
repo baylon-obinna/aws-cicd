@@ -1,58 +1,97 @@
-# AWS Continuous Integration Demo
+END TO END CI/CD IMPLEMENTATION USING AWS CODEPIPELINE AND GITHUB
 
-## Set Up GitHub Repository
+PREREQUISITE
 
-The first step in our CI journey is to set up a GitHub repository to store our Python application's source code. If you already have a repository, feel free to skip this step. Otherwise, let's create a new repository on GitHub by following these steps:
+- AWS account
+  
+- Github with source code
+  
+- Dockerhub account 
 
-- Go to github.com and sign in to your account.
-- Click on the "+" button in the top-right corner and select "New repository."
-- Give your repository a name and an optional description.
-- Choose the appropriate visibility option based on your needs.
-- Initialize the repository with a README file.
-- Click on the "Create repository" button to create your new GitHub repository.
+STEPS FOR CONTINUOUS INTEGRATION
 
-Great! Now that we have our repository set up, we can move on to the next step.
+- Login into aws in IAM service create a codebuild service role and attach these policies;
 
-## Create an AWS CodePipeline
-In this step, we'll create an AWS CodePipeline to automate the continuous integration process for our Python application. AWS CodePipeline will orchestrate the flow of changes from our GitHub repository to the deployment of our application. Let's go ahead and set it up:
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/472af47b-3a40-498a-96e2-29a201aa4266)
 
-- Go to the AWS Management Console and navigate to the AWS CodePipeline service.
-- Click on the "Create pipeline" button.
-- Provide a name for your pipeline and click on the "Next" button.
-- For the source stage, select "GitHub" as the source provider.
-- Connect your GitHub account to AWS CodePipeline and select your repository.
-- Choose the branch you want to use for your pipeline.
-- In the build stage, select "AWS CodeBuild" as the build provider.
-- Create a new CodeBuild project by clicking on the "Create project" button.
-- Configure the CodeBuild project with the necessary settings for your Python application, such as the build environment,  build commands, and artifacts.
-- Save the CodeBuild project and go back to CodePipeline.
-- Continue configuring the pipeline stages, such as deploying your application using AWS Elastic Beanstalk or any other suitable deployment option.
-- Review the pipeline configuration and click on the "Create pipeline" button to create your AWS CodePipeline.
+- Go to Aws system manager and create these parameters and their respective values;
+  
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/83504d8e-c497-4a16-b596-26877c641958)
+this is to avoid hardcoding dockerhub senstive information in the source code.
 
-Awesome job! We now have our pipeline ready to roll. Let's move on to the next step to set up AWS CodeBuild.
+- Edit the source code to have correct details of your parameters name as stored in the systems manager
+  
+- Go to Aws codebuild and create a project,assign the service role created in the first step, provide path to buildspec.yml (this file is what codebuild will use to orchestrate the build process
+  
+- Before starting the build give permissions for codebuild to build images through the environment settings
 
-## Configure AWS CodeBuild
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/178fa74c-cb03-4db1-b4cb-9d12ca6499d7)
 
-In this step, we'll configure AWS CodeBuild to build our Python application based on the specifications we define. CodeBuild will take care of building and packaging our application for deployment. Follow these steps:
+- Start build
 
-- In the AWS Management Console, navigate to the AWS CodeBuild service.
-- Click on the "Create build project" button.
-- Provide a name for your build project.
-- For the source provider, choose "AWS CodePipeline."
-- Select the pipeline you created in the previous step.
-- Configure the build environment, such as the operating system, runtime, and compute resources required for your Python application.
-- Specify the build commands, such as installing dependencies and running tests. Customize this based on your application's requirements.
-- Set up the artifacts configuration to generate the build output required for deployment.
-- Review the build project settings and click on the "Create build project" button to create your AWS CodeBuild project.
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/5d30be3a-2fe9-4c36-ad08-306392d622a5)
 
-Fantastic! With AWS CodeBuild all set up, we're now ready to witness the magic of continuous integration in action.
 
-## Trigger the CI Process
+Some errors while implementing continuous integration
 
-In this final step, we'll trigger the CI process by making a change to our GitHub repository. Let's see how it works:
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/6cbcc8e6-ad14-4cac-be44-a26ec2d2ae46)
+This error was as a result of the codebuild service role not having permission to Aws cloudwatch to create build logs for the build project. Fixed it by attaching AwsCloudwatch full access.
 
-- Go to your GitHub repository and make a change to your Python application's source code. It could be a bug fix, a new feature, or any other change you want to introduce.
-- Commit and push your changes to the branch configured in your AWS CodePipeline.
-- Head over to the AWS CodePipeline console and navigate to your pipeline.
-- You should see the pipeline automatically kick off as soon as it detects the changes in your repository.
-- Sit back and relax while AWS CodePipeline takes care of the rest. It will fetch the latest code, trigger the build process with AWS CodeBuild, and deploy the application if you configured the deployment stage.
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/aaff0b68-eb33-45aa-b6c2-231ed1cf0bd5)
+This error was as a result of codebuild service not being able to access and call parameters and values from Aws systems manager. Fixed it by attaching AmazonSSMFullAccess and AWS systemsManagerForSAPFullAccess. {still figuring which of these did it}
+
+
+STEPS FOR CONTINUOUS DEPLOYMENT/DELIVERY
+
+- At the user interface under codebuild is codedeploy click on it and create an application
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/f7c9dcad-7ae7-4dd5-bbc4-23d33251dc97)
+
+
+- Go to Ec2 and create an instance, install docker and codedeploy agent from official documentation
+  
+- Create a codedeploy service role for Ec2 use case and attach these policies below for Ec2 and codedeploy to interact;
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/096f4f53-ffc2-4a9b-b56d-3c380d61dde3)
+
+- Associate the codedeploy service role to the Ec2 instance
+  ![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/71af858b-3223-4248-878f-ebe8142a39fc)
+
+- Create service role with CodeDeploy permissions that grants AWS CodeDeploy access to your target instances.
+  ![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/60af0491-2620-4df8-a9f0-61f3f542c24f)
+
+- Create a deployment group (target group), select the role above as service role, select Ec2 instance as environment configuration and attached the Ec2 instance created prior(loadbalancer was unchecked because for project just an instance was used).
+  ![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/5f9416b6-40df-461d-bd77-26eb769cd6e0)
+
+- Create a deployment specifying the deployment group, github repositry as source code with specific commit ID.
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/1fa45ab8-ee80-4544-8abe-c2dbc56ff42b)
+
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/4197f1ee-2733-4c13-a973-48e8bece81ad)
+
+
+PIPELINE IMPLEMENTATION
+
+- Click on pipeline below codedeploy
+  
+- Create pipeline, select v2 and new service role
+  
+- Select github as source provider and connect
+   
+- Select repository, branch and no filiter as trigger type
+  
+- Select codebuild as build provider, select project name created prior
+
+- Select codedeploy as deploy provider
+
+- Select application name and deployment created prior
+
+- Create pipeline
+
+  ![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/53197eda-ab35-4076-80c6-4a84ab76bea2)
+Three stages of the pipeline all successfulERRORS WHILE IMPLEMENTING PIPELINE
+
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/28dc9a1c-b496-4c17-82dd-6404ad2733ab)
+
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/255f8945-9855-4798-bbcb-4d5797ada415)
+This is an interesting error it kept me stranded for hours debugging, that error message doesn't really convey much so i had to dig into the deployment events,to see below.
+
+![image](https://github.com/baylon-obinna/aws-cicd/assets/111370498/dbfe560a-8f06-4ef5-9147-5588489dba0e)
+I had to add an if block to stopcontainer.sh to remove container/image if there's a container/image running due to the allocation of a specific port{5000} in the docker run command, also i recreated the ec2 instances because i felt the multiple failed build logs/data affected the health of the instance
